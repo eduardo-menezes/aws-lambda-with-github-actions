@@ -31,10 +31,10 @@ jobs:
         run: |
           aws lambda create-function --function-name ${{ env.script_name }} \
             --runtime python3.8 \
-            --role ${{ secrets.AWS_ARN }}:role/gh-actions-deployer \
+            --role ${{ secrets.AWS_ARN }}:policy/lambda-github-actions \
             --handler ${{ env.script_name }}.lambda_handler \
             --timeout 900 \
-            --memory-size 10240 \
+            --memory-size 3008 \
             --layers arn:aws:lambda:us-east-1:770693421928:layer:Klayers-p38-requests:4 \
                 arn:aws:lambda:us-east-1:770693421928:layer:Klayers-p38-pandas:5 \
             --zip-file fileb://${{ env.working-directory }}/${{ env.script_name }}.zip \
