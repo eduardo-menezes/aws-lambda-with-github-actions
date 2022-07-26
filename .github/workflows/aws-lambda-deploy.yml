@@ -31,7 +31,7 @@ jobs:
         run: |
           aws lambda create-function --function-name ${{ env.script_name }} \
             --runtime python3.8 \
-            --role ${{ secrets.AWS_ARN }}:policy/lambda-github-actions \
+            --role ${{ secrets.AWS_ROLE }} \
             --handler ${{ env.script_name }}.lambda_handler \
             --timeout 900 \
             --memory-size 3008 \
