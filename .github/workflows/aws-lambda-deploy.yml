@@ -1,0 +1,67 @@
+name: aws-lambda-deploy
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-lambda-tabela_midia:
+    runs-on: ubuntu-latest
+    env:
+      working-directory: . 
+      script_name: nasa_api
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: cria zip
+        
+        run: cd ${{ env.working-directory }} && zip ${{ env.script_name }}.zip ${{ env.script_name }}.py
+      - name: cria funcao
+        id: deploy1
+        continue-on-error: true
+        
+        run: |
+          aws lambda create-function --function-name ${{ env.script_name }} \
+            --runtime python3.8 \
+            --role ${{ secrets.AWS_ARN }}:role/gh-actions-deployer \
+            --handler ${{ env.script_name }}.lambda_handler \
+            --timeout 900 \
+            --memory-size 10240 \
+            --layers arn:aws:lambda:us-east-1:770693421928:layer:Klayers-p38-requests:4 \
+                arn:aws:lambda:us-east-1:770693421928:layer:Klayers-p38-pandas:5 \
+            --zip-file fileb://${{ env.working-directory }}/${{ env.script_name }}.zip \
+            --publish
+      - name: put event trigger
+        continue-on-error: true
+        run: |
+          aws events put-rule --name ${{ env.script_name }}-rule \
+            --schedule-expression "cron(0 6 * * ? *)"
+      - name: EventBridge run the rule
+        continue-on-error: true
+        run: |
+          aws lambda add-permission \
+            --function-name ${{ env.script_name }} \
+            --statement-id ${{ env.script_name }}-rule \
+            --action 'lambda:InvokeFunction' \
+            --principal events.amazonaws.com \
+            --source-arn ${{ secrets.AWS_ARN }}:rule/${{ env.script_name }}-rule
+        
+      - name: Add rule to the function
+        continue-on-error: true
+        run: aws events put-targets --rule ${{ env.script_name }}-rule --targets "Id"="1","Arn"="arn:${{ secrets.AWS_ARN }}:function:${{ env.script_name }}"
+      
+      - name: after_failure
+        run: |
+          aws lambda update-function-code \
+            --function-name ${{ env.script_name }} \
+            --zip-file fileb://${{ env.working-directory }}/${{ env.script_name }}.zip
+        if: steps.deploy1.outcome != 'success'
+  

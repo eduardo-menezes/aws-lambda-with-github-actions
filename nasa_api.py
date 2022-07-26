@@ -1,6 +1,6 @@
 # importando as bibliotecas
-import pandas as pd
 import requests
+import pandas as pd
 import os
 
 # pego o token de acesso definido como variavel de ambiente
