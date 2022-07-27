@@ -37,5 +37,6 @@ def lambda_handler(event, context):
 
   response = main()
   df = normaliza_dados(response)
+  print(df)
   print("Function exection ended")
 
